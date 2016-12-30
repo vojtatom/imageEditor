@@ -2,26 +2,51 @@
  
 from tkinter import *
 from tkinter.filedialog import askopenfile, asksaveasfile
+from tkinter.messagebox import showerror
 from PIL import Image, ImageTk
 import numpy as np
 from time import sleep
+import os
 
 class Application() :
     def __init__(self, main) :
         self.root = main
+        self.root.title("Image editor")
         self.canvas = Canvas(root, width=500, height=200)
 
         #setup text
-        self.canvas_text = self.canvas.create_text(40, 90, anchor="nw")
-        self.canvas.itemconfig(self.canvas_text, text="click to load the image")
-        self.canvas.bind("<Button-1>", self.canvas_click)
+        # self.canvas_text = self.canvas.create_text(40, 90, anchor="nw")
+        # self.canvas.itemconfig(self.canvas_text, text="click to load the image")
+        # self.canvas.bind("<Button-1>", self.image_change)
 
         self.image_loaded = False
+
+        #menu
+        self.menubar = Menu(self.root)
+
+        self.submenu1 = Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="File", menu=self.submenu1)
+        self.submenu1.add_command(label="Load image", command=self.load_image)
+        self.submenu1.add_command(label="Save image", command=self.save_image)
+        self.submenu1.add_separator()
+        self.submenu1.add_command(label="Exit", command=self.exit)
+
+        self.submenu2 = Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="Edit", menu=self.submenu2)
+        self.submenu2.add_command(label="Inverse")
+        self.submenu2.add_command(label="Grayscale")
+        self.submenu2.add_command(label="Lighten/Darken")
+        self.submenu2.add_command(label="Edge Detection")
+
+        self.root.config(menu=self.menubar)
+        self.menubar.entryconfig("Edit", state=DISABLED)
+        self.submenu1.entryconfig("Save image", state=DISABLED)
+
 
         # define options for opening or saving a file
         self.file_opt = options = {}
         options['defaultextension'] = '.txt'
-        options['filetypes'] = [('all files', '.*'), ('text files', '.txt')]
+        options['filetypes'] = [('all files', '.*'), ('PNG', '.png'), ('JPG', '.jpg .jpeg'), ('PPM', '.ppm')]
         options['initialdir'] = 'C:\\'
         options['initialfile'] = 'myfile.png'
         options['parent'] = root
@@ -29,7 +54,7 @@ class Application() :
 
     def add_main_image(self, directory) :
         #remove text
-        self.canvas.delete(self.canvas_text)
+        # self.canvas.delete(self.canvas_text)
         
         #add image
         self.pillow_image = Image.open(directory)
@@ -61,18 +86,27 @@ class Application() :
         self.canvas.update()
         self.canvas.pack()
 
-    def canvas_click(self, event) :
-        if self.image_loaded == False :
-            directory = askopenfile(mode='r', **self.file_opt)
-            print(directory)
+    def load_image(self) :
+        directory = askopenfile(mode='r', **self.file_opt)
+        if directory is None :
+            return
+        try :
             self.add_main_image(directory.name)
             self.image_loaded = True
-        else :
-            directory = asksaveasfile(mode='w', **self.file_opt)
-            print("OUTPUT", directory)
-            self.save_main_image(directory.name)
-            self.image_loaded = False
+            self.menubar.entryconfig("Edit", state=NORMAL)
+            self.submenu1.entryconfig("Save image", state=NORMAL)
+        except:
+            showerror("Opening image", "Can't open this image...")
 
+    def save_image(self) :
+        directory = asksaveasfile(mode='w', **self.file_opt)
+        if directory is None :
+            return
+        self.save_main_image(directory.name)
+        self.image_loaded = False
+
+    def exit(self) :
+        quit()
 
 root = Tk()
 root.resizable(width=False, height=False)
