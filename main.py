@@ -7,7 +7,8 @@ from PIL import Image, ImageTk
 import numpy as np
 from time import sleep
 import os
-import imagesetup 
+import imageoperations
+import edit
 
 class Application() :
     def __init__(self, main) :
@@ -31,7 +32,6 @@ class Application() :
 
         #setup listbox
         self.listbox = Listbox(self.frame_side, relief=FLAT, bg='gray7', fg='white', borderwidth=10, selectborderwidth=0, selectbackground='gray7', selectforeground='white', highlightthickness=0)
-        self.listbox.insert(END, "no filters")
 
         #menu
         self.setup_menu()
@@ -57,7 +57,7 @@ class Application() :
 
         self.submenu2 = Menu(self.menubar, tearoff=0, bg='gray7', fg='white', relief=FLAT)
         self.menubar.add_cascade(label="Edit", menu=self.submenu2)
-        self.submenu2.add_command(label="Inverse")
+        self.submenu2.add_command(label="Inverse", command=self.inverse)
         self.submenu2.add_command(label="Grayscale")
         self.submenu2.add_command(label="Lighten/Darken")
 
@@ -104,12 +104,11 @@ class Application() :
 
         try :
             self.load_main_image(directory.name)
-            self.image_loaded = True
 
             if self.loaded == False :
                 self.menu_enable()
                 self.loaded = True
-        except Exception:
+        except RuntimeError:
             showerror("Opening image", "Can't open this image...")
 
         self.canvas.update()
@@ -124,8 +123,9 @@ class Application() :
 
     def load_main_image(self, directory) :
         #add image and info
-        self.pillow_image, self.pillow_preview_image, self.np_image, info = imagesetup.load_image(directory)
+        self.pillow_image, self.pillow_preview_image, self.np_image, info = imageoperations.load_image(directory)
         width, height = self.pillow_preview_image.size
+        self.mode = self.pillow_image.mode
         self.data = ImageTk.PhotoImage(self.pillow_preview_image) 
         self.main_image = self.canvas.create_image((width, height), image=self.data, anchor=SE)
         self.canvas.config(width=width, height=height)
@@ -133,6 +133,15 @@ class Application() :
 
     def exit(self) :
         quit()
+
+    #APPLYING FILTERS
+    def inverse(self) :
+        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.inverse(self.np_image, self.mode)
+        self.data = ImageTk.PhotoImage(self.pillow_preview_image)
+        self.listbox.insert(END, "inverse") 
+        self.canvas.itemconfig(self.main_image, image=self.data)
+        self.canvas.update()
+        self.frame_side.update()
 
 root = Tk()
 # turend off doesn't work ---
