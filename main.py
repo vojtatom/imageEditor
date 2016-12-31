@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 import numpy as np
 from time import sleep
 import os
+import imagesetup 
 
 class Application() :
     def __init__(self, main) :
@@ -100,6 +101,7 @@ class Application() :
         directory = askopenfile(mode='r', **self.file_opt)
         if directory is None :
             return
+
         try :
             self.load_main_image(directory.name)
             self.image_loaded = True
@@ -107,13 +109,11 @@ class Application() :
             if self.loaded == False :
                 self.menu_enable()
                 self.loaded = True
-
-        except ValueError :
-            print(ValueError)
+        except Exception:
             showerror("Opening image", "Can't open this image...")
 
-            self.canvas.update()
-            self.frame_side.update()
+        self.canvas.update()
+        self.frame_side.update()
 
     def save_image(self) :
         directory = asksaveasfile(mode='w', **self.file_opt)
@@ -123,42 +123,14 @@ class Application() :
         self.image_loaded = False
 
     def load_main_image(self, directory) :
-        #add image
-        self.pillow_image = Image.open(directory)
-        print(self.pillow_image)
-        self.np_image = np.asarray(self.pillow_image, dtype=np.float)    
-        width, height = self.pillow_image.size
-        file_size = os.path.getsize(directory)
-        self.pillow_preview_image = self.pillow_image
-
-        #resize if necessary
-        if width > 1000 :
-           width, height = self.resize(1000, 'WIDTH') 
-        if height > 600 :
-            width, height = self.resize(600, 'HEIGHT') 
-
+        #add image and info
+        self.pillow_image, self.pillow_preview_image, self.np_image, info = imagesetup.load_image(directory)
+        width, height = self.pillow_preview_image.size
         self.data = ImageTk.PhotoImage(self.pillow_preview_image) 
         self.main_image = self.canvas.create_image((width, height), image=self.data, anchor=SE)
         self.canvas.config(width=width, height=height)
-        
-        #update text
-        info = '{}x{}\n{}\n{} kB'.format(width, height, self.pillow_image.format, file_size/1000)
         self.label2.config(text=info)
 
-    def resize(self, base, orientation) :
-        if orientation == 'WIDTH' :
-            x, y = self.pillow_preview_image.size
-        else :
-            y, x = self.pillow_preview_image.size
-        wpercent = base / x
-        new_size = int(y * wpercent)
-        if orientation == 'WIDTH' :
-            self.pillow_preview_image = self.pillow_image.resize((base, new_size), Image.ANTIALIAS)
-            return base, new_size
-        else :
-            self.pillow_preview_image = self.pillow_image.resize((new_size, base), Image.ANTIALIAS)
-            return new_size, base
-            
     def exit(self) :
         quit()
 
