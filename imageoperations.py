@@ -21,14 +21,19 @@ def load_image(directory) :
         #update text
         return pillow_image, pillow_preview_image, np_image, info
 
-def scale_both(pillow_image) :
+def get_miniature(pillow_image) :
+    out_preview = scale_both(pillow_image, 300, 300)
+    np_image = np.asarray(out_preview, dtype=np.float)
+    return out_preview, np_image
+
+def scale_both(pillow_image, w_max = 1000, h_max = 600) :
     pillow_preview_image = pillow_image
     width, height = pillow_image.size
 
-    if width > 1000 :
-           pillow_preview_image, width, height = resize(1000, 'WIDTH', pillow_image, pillow_preview_image) 
-    if height > 600 :
-           pillow_preview_image, width, height = resize(600, 'HEIGHT', pillow_image, pillow_preview_image) 
+    if width > w_max :
+           pillow_preview_image, width, height = resize(w_max, 'WIDTH', pillow_image, pillow_preview_image) 
+    if height > h_max :
+           pillow_preview_image, width, height = resize(h_max, 'HEIGHT', pillow_image, pillow_preview_image) 
     return pillow_preview_image
 
 def resize(base, orientation, pillow_image, pillow_preview_image) :
@@ -51,12 +56,33 @@ def inverse(np_image, mode) :
     elif mode == 'RGBA' :
         negativ = edit.inverse_RGBA(np_image)
     else :
-        return
+        return #NOT SUPPORTED
 
-    negativ_tmp = np.asarray(negativ, dtype=np.uint8)
-    print(negativ_tmp.shape, negativ_tmp.size)
+    return output(negativ, mode)
 
-    out = Image.fromarray(negativ_tmp, mode)
+def grayscale(np_image, mode) :
+    if mode == 'RGB' :
+        grayscale = edit.grayscale(np_image)
+    elif mode == 'RGBA' :
+        grayscale = edit.grayscale_RGBA(np_image)
+    else :
+        return #NOT SUPPORTED
+
+    return output(grayscale, mode)
+
+def brightness(np_image, mode, value) :
+    if mode == 'L' or mode == 'RGB' :
+        brightness = edit.brightness(np_image, value)
+    elif mode == 'RGBA' :
+        brightness = edit.brightness_RGBA(np_image, value)
+    else :
+        return #NOT SUPPORTED
+
+    return output(brightness, mode)
+
+def output(np_image, mode) :
+    np_tmp = np.asarray(np_image, dtype=np.uint8)
+    out = Image.fromarray(np_tmp, mode)
     out_preview = scale_both(out)
 
-    return out, out_preview, negativ
+    return out, out_preview, np_image
