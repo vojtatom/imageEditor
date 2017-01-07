@@ -2,6 +2,7 @@ from PIL import Image
 import numpy as np
 import os
 import edit
+import filters
 
 def load_image(directory) :
         #add image
@@ -21,9 +22,18 @@ def load_image(directory) :
         #update text
         return pillow_image, pillow_preview_image, np_image, info, (width, height, pillow_image.format, file_size)
 
+def update_image(pillow_image, info) :
+    #resize if necessary
+    pillow_preview_image = scale_both(pillow_image)
+    np_image = np.asarray(pillow_image, dtype=np.float)
+
+    #update text
+    return pillow_image, pillow_preview_image, np_image
+
+
 def update_size_info(pillow_image, info) :
     width, height = pillow_image.size
-    return create_info(width, height, info[2], info[3])
+    return create_info(width, height, info[2], info[3]), (width, height, info[2], info[3])
 
 def create_info(width=0, height=0, format=0, size=0) : 
         info = '{}x{}\n{}\n{} kB'.format(width, height, format, size/1000)
@@ -96,11 +106,30 @@ def output(np_image, mode) :
     return out, out_preview, np_image
 
 def edges_detection(np_image, mode) :
-    if mode == 'RGB' :
-        edges = edit.edges_detection(np_image)
-    elif mode == 'RGBA' :
-        pass
-    else :
-        return #NOT SUPPORTED
+    out = edit.filter(filters.edges_detection, np_image, mode)
+    return output(out, mode)
 
-    return output(edges, mode)
+def emboss_weak(np_image, mode) :
+    out = edit.filter(filters.emboss_weak, np_image, mode)
+    return output(out, mode)
+
+def emboss_strong(np_image, mode) :
+    out = edit.filter(filters.emboss_strong, np_image, mode)
+    return output(out, mode)
+
+def motion_blur(np_image, mode) :
+    out = edit.filter(filters.motion_blur, np_image, mode)
+    return output(out, mode)
+
+def sharpen_ee(np_image, mode) :
+    out = edit.filter(filters.sharpen_ee, np_image, mode)
+    return output(out, mode)
+
+def sharpen_c(np_image, mode) :
+    out = edit.filter(filters.sharpen_c, np_image, mode)
+    return output(out, mode)
+
+def sharpen_se(np_image, mode) :
+    out = edit.filter(filters.sharpen_se, np_image, mode)
+    return output(out, mode)
+

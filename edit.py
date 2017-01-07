@@ -1,7 +1,6 @@
 from PIL import Image
 import numpy as np
 from numba import jit
-import filters
 
 def inverse(np_image) :
 	print(np_image.shape, np_image.size)
@@ -62,12 +61,17 @@ def brightness_RGBA(np_image, value) :
 	output[output > 255] = 255
 	return output
 
-def edges_detection(np_image) :
-	outputRGB = apply_filter(np_image, filters.edges_detection)
-	return outputRGB
+def filter(filter, np_image, mode) :
+	if mode == 'L' :
+		output = apply_filter_L(np_image, filter)
+	elif mode == 'RGB' :
+		output = apply_filter_RGB(np_image, filter)
+	elif mode == 'RGBA' :
+		output = apply_filter_RGB(np_image, filter)
+		output = apply_alpha(output, np_image, filter)
+	return output
 
-
-def apply_filter(np_image, filter) :
+def apply_filter_RGB(np_image, filter) :
 	R, G, B = slice_image(np_image)
 	bottom, top = filter_dimensions(filter)
 	outR = apply(R, filter, top, bottom)
@@ -75,6 +79,19 @@ def apply_filter(np_image, filter) :
 	outB = apply(B, filter, top, bottom)
 	outRGB = np.dstack((outR, outG, outB))
 	return outRGB
+
+def apply_filter_L(np_image, filter) :
+	bottom, top = filter_dimensions(filter)
+	out = apply(np_image, filter, top, bottom)
+	return out
+
+def apply_alpha(outputRGBA, np_image, filter) :
+	bottom, top = filter_dimensions(filter)
+	alpha = np_image[bottom:-bottom,bottom:-bottom,np.newaxis,3]
+
+	print(outputRGBA.shape, alpha.shape)
+	RGBA = np.concatenate((outputRGBA, alpha), axis=2)
+	return RGBA
 
 def slice_image(np_image) :
 	return np_image[:,:,0], np_image[:,:,1], np_image[:,:,2]
