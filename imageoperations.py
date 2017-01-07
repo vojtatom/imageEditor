@@ -13,13 +13,21 @@ def load_image(directory) :
         print(pillow_image)    
         width, height = pillow_image.size
         file_size = os.path.getsize(directory)
-        info = '{}x{}\n{}\n{} kB'.format(width, height, pillow_image.format, file_size/1000)
+        info = create_info(width, height, pillow_image.format, file_size)
         
         #resize if necessary
         pillow_preview_image = scale_both(pillow_image)
         np_image = np.asarray(pillow_image, dtype=np.float)
         #update text
-        return pillow_image, pillow_preview_image, np_image, info
+        return pillow_image, pillow_preview_image, np_image, info, (width, height, pillow_image.format, file_size)
+
+def update_size_info(pillow_image, info) :
+    width, height = pillow_image.size
+    return create_info(width, height, info[2], info[3])
+
+def create_info(width=0, height=0, format=0, size=0) : 
+        info = '{}x{}\n{}\n{} kB'.format(width, height, format, size/1000)
+        return info
 
 def get_miniature(pillow_image) :
     out_preview = scale_both(pillow_image, 300, 300)
@@ -86,3 +94,13 @@ def output(np_image, mode) :
     out_preview = scale_both(out)
 
     return out, out_preview, np_image
+
+def edges_detection(np_image, mode) :
+    if mode == 'RGB' :
+        edges = edit.edges_detection(np_image)
+    elif mode == 'RGBA' :
+        pass
+    else :
+        return #NOT SUPPORTED
+
+    return output(edges, mode)

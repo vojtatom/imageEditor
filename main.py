@@ -69,7 +69,7 @@ class Application() :
         self.submenu3.add_command(label="Sharpen - excessive edges")
         self.submenu3.add_command(label="Sharpen - crisp")
         self.submenu3.add_command(label="Sharpen - subtle edges")
-        self.submenu3.add_command(label="Edge Detection")
+        self.submenu3.add_command(label="Edge Detection", command=self.edges_detection)
 
         self.root.config(menu=self.menubar)
         self.menubar.entryconfig("Edit", state=DISABLED)
@@ -98,13 +98,13 @@ class Application() :
         self.frame_side.pack(expand=1, side=LEFT, fill=BOTH)
 
     def load_image(self, directory=None) :
-        directory = askopenfile(mode='r', **self.file_opt)
+        # directory = askopenfile(mode='r', **self.file_opt)
         if directory is None :
             return
 
         try :
-            self.load_main_image(directory.name)
-            # self.load_main_image(directory)
+            # self.load_main_image(directory.name)
+            self.load_main_image(directory)
 
             if self.loaded == False :
                 self.menu_enable()
@@ -124,14 +124,19 @@ class Application() :
 
     def load_main_image(self, directory) :
         #add image and info
-        self.pillow_image, self.pillow_preview_image, self.np_image, info = imageoperations.load_image(directory)
+        self.pillow_image, self.pillow_preview_image, self.np_image, info, self.info_raw = imageoperations.load_image(directory)
         width, height = self.pillow_preview_image.size
         self.mode = self.pillow_image.mode
         self.data = ImageTk.PhotoImage(self.pillow_preview_image) 
-        self.main_image = self.canvas.create_image((width, height), image=self.data, anchor=SE)
+        self.main_image = self.canvas.create_image(0,0, image=self.data, anchor=NW)
         self.canvas.config(width=width, height=height, bg='white')
         self.label2.config(text=info)
         self.listbox.delete(0, END)
+
+    def update_info(self) :
+        info = imageoperations.update_size_info(self.pillow_image, self.info_raw)
+        self.label2.config(text=info)
+        self.label2.update()
 
     def exit(self) :
         quit()
@@ -162,7 +167,7 @@ class Application() :
         width, height = self.br_preview.size
         self.br_canvas = Canvas(self.br_window, width=width, height=height, bg='white', highlightthickness=0)
         self.br_data = ImageTk.PhotoImage(self.br_preview) 
-        self.br_preview_image = self.br_canvas.create_image((width, height), image=self.br_data, anchor=SE)
+        self.br_preview_image = self.br_canvas.create_image(0,0, image=self.br_data, anchor=NW)
 
         self.br_canvas.pack(fill=BOTH)
         self.slider.pack(fill=BOTH)
@@ -174,7 +179,13 @@ class Application() :
     def update_app(self, value) :
         self.data = ImageTk.PhotoImage(self.pillow_preview_image)
         self.listbox.insert(END, value) 
-        self.canvas.itemconfig(self.main_image, image=self.data)
+        
+        width, height = self.pillow_preview_image.size
+        print(width, height)
+
+        self.canvas.config(width=width, height=height, bg='white')
+        self.canvas.itemconfig(self.main_image, image=self.data, anchor=NW)
+        
         self.canvas.update()
         self.frame_side.update()
 
@@ -191,13 +202,18 @@ class Application() :
         self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.brightness(self.np_image, self.mode, value)
         self.update_app("brightness")
 
+    def edges_detection(self) :
+        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.edges_detection(self.np_image, self.mode)
+        self.update_app("edges detection")
+        self.update_info()
+
 root = Tk()
 # turend off doesn't work sometimes ---
 root.resizable(width=False, height=False)
 app = Application(root)
 app.run_application()
 # app.load_image('./bird.png')
-# app.load_image('./kvetina.ppm')
+app.load_image('./kvetina.ppm')
 # app.load_image('./rgba.png')
 # app.load_image('./channel1.png')
 root.mainloop()
