@@ -10,8 +10,7 @@ def load_image(directory) :
             pillow_image = Image.open(directory)
         except Exception as Import_error :
             raise Exception(Import_error)
-
-        print(pillow_image)    
+  
         width, height = pillow_image.size
         file_size = os.path.getsize(directory)
         info = create_info(width, height, pillow_image.format, file_size)
@@ -69,7 +68,7 @@ def resize(base, orientation, pillow_image, pillow_preview_image) :
         return pillow_preview_image, new_size, base
         
 def inverse(np_image, mode) :
-    if mode == 'L' or mode == 'RGB' :
+    if mode == 'L' or mode == 'RGB' or mode =='P' :
         negativ = edit.inverse(np_image)
     elif mode == 'RGBA' :
         negativ = edit.inverse_RGBA(np_image)
@@ -89,7 +88,7 @@ def grayscale(np_image, mode) :
     return output(grayscale, mode)
 
 def brightness(np_image, mode, value) :
-    if mode == 'L' or mode == 'RGB' :
+    if mode == 'L' or mode == 'RGB' or mode =='P' :
         brightness = edit.brightness(np_image, value)
     elif mode == 'RGBA' :
         brightness = edit.brightness_RGBA(np_image, value)

@@ -22,6 +22,7 @@ class Application() :
 
         #setup side frame
         self.frame_side = Frame(self.root, bg='gray7', borderwidth=10)
+        self.frame_bottom = Frame(self.frame_side, bg='gray7', borderwidth=10)
 
         #setup info label
         self.label1 = Label(self.frame_side, text='Image info:', bg='gray7', fg='white', anchor=W)
@@ -29,7 +30,10 @@ class Application() :
         self.label3 = Label(self.frame_side, text='Applied effects:', bg='gray7', fg='white', anchor=W)
 
         #setup listbox
-        self.listbox = Listbox(self.frame_side, relief=FLAT, bg='gray7', fg='white', borderwidth=10, selectborderwidth=0, selectbackground='gray7', selectforeground='white', highlightthickness=0)
+        self.listbox = Listbox(self.frame_bottom, relief=FLAT, bg='gray7', fg='white', borderwidth=10, selectborderwidth=0, selectbackground='gray7', selectforeground='white', highlightthickness=0)
+
+        #setup scroll
+        self.scrollbar = Scrollbar(self.frame_bottom, bg='gray7', relief='flat')
 
         #menu
         self.setup_menu()
@@ -65,7 +69,7 @@ class Application() :
         self.menubar.add_cascade(label="Filters", menu=self.submenu3)
         self.submenu3.add_command(label="Weak emboss", command=self.emboss_weak)
         self.submenu3.add_command(label="Strong emboss", command=self.emboss_strong)
-        self.submenu3.add_command(label="Motion emboss", command=self.motion_blur)
+        self.submenu3.add_command(label="Motion blur", command=self.motion_blur)
         self.submenu3.add_command(label="Sharpen - excessive edges", command=self.sharpen_ee)
         self.submenu3.add_command(label="Sharpen - crisp", command=self.sharpen_c)
         self.submenu3.add_command(label="Sharpen - subtle edges", command=self.sharpen_se)
@@ -78,14 +82,22 @@ class Application() :
         self.submenu2.entryconfig("Undo", state=DISABLED)
 
     def menu_enable(self) :
-        self.menubar.entryconfig("Edit", state=NORMAL)
-        self.submenu1.entryconfig("Save image", state=NORMAL)
-        self.menubar.entryconfig("Filters", state=NORMAL)
-        self.canvas.delete(self.canvas_text)
+        if self.loaded == FALSE :
+            self.menubar.entryconfig("Edit", state=NORMAL)
+            self.submenu1.entryconfig("Save image", state=NORMAL)
+            self.menubar.entryconfig("Filters", state=NORMAL)
+            self.canvas.delete(self.canvas_text)
+
+        if self.mode == "L" or self.mode == "P" :
+            self.submenu2.entryconfig("Grayscale", state=DISABLED)
+        else :
+            self.submenu2.entryconfig("Grayscale", state=NORMAL)
 
     def save_main_image(self, directory) :
-        #TODO - apply filters
-        self.pillow_image.save(directory)
+        try :
+            self.pillow_image.save(directory)
+        except :
+            showerror("Saving image", "Can't save this image as\n{}".format(directory))
         self.canvas.update()
 
     def run_application(self) :
@@ -94,43 +106,57 @@ class Application() :
         self.label1.pack(fill=X)
         self.label2.pack(fill=X)
         self.label3.pack(fill=X)
-        self.listbox.pack(expand=1, fill=BOTH)
+
+        self.listbox.pack(expand=1, fill=Y, side=LEFT)
+        self.scrollbar.pack(side=RIGHT, fill=Y)
+
+        self.listbox.configure(yscrollcommand = self.scrollbar.set)
+        self.scrollbar.configure(command = self.listbox.yview)
+
+        self.frame_bottom.update()
+        self.frame_bottom.pack(expand=1, side=BOTTOM, fill=BOTH)
+
         self.frame_side.update()
         self.frame_side.pack(expand=1, side=LEFT, fill=BOTH)
 
     def load_image(self, directory=None) :
-        directory = askopenfile(mode='r', **self.file_opt)
         if directory is None :
-            return
+            directory = askopenfile(mode='r', **self.file_opt)
+            if directory is None :
+                return
+            else :
+                directory = directory.name
 
         try :
-            self.load_main_image(directory.name)
-            # self.load_main_image(directory)
-
-            if self.loaded == False :
-                self.menu_enable()
-                self.loaded = True
+            self.load_main_image(directory)
+            self.menu_enable()
+            self.loaded = True
         except :
             showerror("Opening image", "Can't open this image...")
 
         self.canvas.update()
         self.frame_side.update()
 
-    def save_image(self) :
-        directory = asksaveasfile(mode='w', **self.file_opt)
+    def save_image(self, directory=None) :
         if directory is None :
-            return
-        self.save_main_image(directory.name)
+            directory = asksaveasfile(mode='w', **self.file_opt)
+            if directory is None :
+                return
+            else :
+                directory = directory.name
+
+        self.save_main_image(directory)
         self.image_loaded = False
 
     def load_main_image(self, directory) :
+        #add image and info
+        self.pillow_image, self.pillow_preview_image, self.np_image, info, self.info_raw = imageoperations.load_image(directory)
+        
         try :
             self.canvas.delete(self.main_image)
         except :
-            print("First image")
+            pass
 
-        #add image and info
-        self.pillow_image, self.pillow_preview_image, self.np_image, info, self.info_raw = imageoperations.load_image(directory)
         width, height = self.pillow_preview_image.size
         self.mode = self.pillow_image.mode
         self.data = ImageTk.PhotoImage(self.pillow_preview_image) 
@@ -145,7 +171,6 @@ class Application() :
     def update_app(self) :
         self.data = ImageTk.PhotoImage(self.pillow_preview_image)       
         width, height = self.pillow_preview_image.size
-        print(width, height)
 
         self.canvas.config(width=width, height=height, bg='white')
         self.canvas.itemconfig(self.main_image, image=self.data, anchor=NW)
@@ -155,6 +180,7 @@ class Application() :
 
     def add_list(self, value) :
         self.listbox.insert(END, value)
+        self.listbox.yview(END)
 
     def remove_list(self) :
         self.listbox.delete(END)
@@ -164,17 +190,19 @@ class Application() :
         self.label2.config(text=info)
 
     def add_history(self, pic) :
-        print("added history")
         self.history.append(pic)
         self.submenu2.entryconfig("Undo", state=NORMAL)
 
     def undo_history(self) :
-        pic = self.history[-1]
-        del self.history[-1]
+        try :
+            pic = self.history[-1]
+            del self.history[-1]
+        except :
+            return
+
         try :
            self.history[-1]
         except :
-            print("history empty")
             self.submenu2.entryconfig("Undo", state=DISABLED)
 
         self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.update_image(pic, self.info_raw)
@@ -187,17 +215,13 @@ class Application() :
 
     #APPLYING FILTERS
     def inverse(self) :
-        self.add_history(self.pillow_image)
-        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.inverse(self.np_image, self.mode)
-        self.add_list("inverse")
-        self.update_app()
+        self.apply_effect(imageoperations.inverse, "inverse")
 
     def grayscale(self) :
-        self.add_history(self.pillow_image)
-        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.grayscale(self.np_image, self.mode)
-        self.add_list("grayscale")
-        self.update_app()
+        if self.mode == 'RGB' or self.mode == 'RGBA':
+            self.apply_effect(imageoperations.grayscale, "grayscale")
 
+    #MINI WINDOW BRIGHTNESS GUI ------
     def brightness(self) :
         #setup preview
         self.br_window = Toplevel(bg='gray7')
@@ -245,54 +269,84 @@ class Application() :
         self.update_app()
 
     def edges_detection(self) :
-        self.add_history(self.pillow_image)
-        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.edges_detection(self.np_image, self.mode)
-        self.add_list("edges detection")
-        self.update_app()
+        self.apply_effect(imageoperations.edges_detection, "edges detection")
 
     def emboss_weak(self) :
-        self.add_history(self.pillow_image)
-        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.emboss_weak(self.np_image, self.mode)
-        self.add_list("weak emboss")
-        self.update_app()
+        self.apply_effect(imageoperations.emboss_weak, "weak emboss")
 
     def emboss_strong(self) :
-        self.add_history(self.pillow_image)
-        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.emboss_strong(self.np_image, self.mode)
-        self.add_list("weak emboss")
-        self.update_app()
+        self.apply_effect(imageoperations.emboss_strong, "strong emboss")
 
     def motion_blur(self) :
-        self.add_history(self.pillow_image)
-        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.motion_blur(self.np_image, self.mode)
-        self.add_list("weak emboss")
-        self.update_app()
+        self.apply_effect(imageoperations.motion_blur, "motion blur")
 
     def sharpen_ee(self) :
-        self.add_history(self.pillow_image)
-        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.sharpen_ee(self.np_image, self.mode)
-        self.add_list("sharpen - edges excessively")
-        self.update_app()
+        self.apply_effect(imageoperations.sharpen_ee, "sharpen - edges excessively")
 
     def sharpen_c(self) :
-        self.add_history(self.pillow_image)
-        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.sharpen_c(self.np_image, self.mode)
-        self.add_list("sharpen - crisp")
-        self.update_app()
+        self.apply_effect(imageoperations.sharpen_c, "sharpen - crisp")
 
     def sharpen_se(self) :
+        self.apply_effect(imageoperations.sharpen_se, "sharpen - subtle edges")
+
+    def apply_effect(self, function, name) :
         self.add_history(self.pillow_image)
-        self.pillow_image, self.pillow_preview_image, self.np_image = imageoperations.sharpen_se(self.np_image, self.mode)
-        self.add_list("sharpen - subtle edges")
+        self.pillow_image, self.pillow_preview_image, self.np_image = function(self.np_image, self.mode)
+        self.add_list(name)
+        self.update_info()
         self.update_app()
 
+def test_files(app, paths):
+    for x in paths :
+        try :
+            app.load_image(x)
+            print("> succesfull load", x)
+        except :
+            print(">>> failed load", x)
+
+        try :
+            app.save_image("." + x)
+            print("> succesfull save", x)
+        except :
+            print(">>> failed save", x)
+
+def test_filters(app, paths):
+    for x in paths :
+        try :
+            app.load_image(x)
+            print(">> running in mode", app.mode, "...")
+            app.inverse()
+            app.emboss_weak()
+            app.emboss_strong()
+            app.undo_history()
+            app.motion_blur()
+            app.sharpen_ee()
+            app.sharpen_c()
+            app.undo_history()
+            app.undo_history()
+            app.undo_history()
+            app.undo_history()
+            app.sharpen_se()
+            app.edges_detection()
+            app.grayscale()
+            print("> succesfull on", x)
+        except :
+            print(">>> error on", x)
+
 root = Tk()
-# turend off doesn't work sometimes ---
 root.resizable(width=False, height=False)
 app = Application(root)
 app.run_application()
+
+#TESTS
+# test_files(app, ('./bird.png', './kvetina.ppm', './rgba.png', './channel1.png', './icon.png', './icon.ico'))
+test_filters(app, ('./kvetina.ppm', './rgba.png', './channel1.png', './icon.png', './icon.ico'))
+
+# test_filters(app, ('./bird.png',))
+app.exit()
 # app.load_image('./bird.png')
 # app.load_image('./kvetina.ppm')
 # app.load_image('./rgba.png')
 # app.load_image('./channel1.png')
+
 root.mainloop()

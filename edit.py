@@ -2,11 +2,12 @@ from PIL import Image
 import numpy as np
 from numba import jit
 
+@jit
 def inverse(np_image) :
-	print(np_image.shape, np_image.size)
 	negativ = 255 - np_image
 	return negativ
 
+@jit
 def inverse_RGBA(np_image) :
 	negativ = np.empty(np_image.shape, dtype=np.float)
 	negativ[:,:,0:3] = 255 - np_image[:,:,0:3]
@@ -47,22 +48,24 @@ def gamma( Y ) :
 	else :
 		return 1.055 * (Y ** (1/2.4)) - 0.055
 
+@jit
 def brightness(np_image, value) :
 	i = (value + 100) / 100
 	output = np_image * i
 	output[output > 255] = 255
 	return output
 
+@jit
 def brightness_RGBA(np_image, value) :
 	output = np.empty(np_image.shape, dtype=np.float)
 	i = (value + 100) / 100
-	output[:,:,] = np_image[:,:,0:3] * i
+	output[:,:,0:3] = np_image[:,:,0:3] * i
 	output[:,:,3] = np_image[:,:,3]
 	output[output > 255] = 255
 	return output
 
 def filter(filter, np_image, mode) :
-	if mode == 'L' :
+	if mode == 'L' or mode == 'P':
 		output = apply_filter_L(np_image, filter)
 	elif mode == 'RGB' :
 		output = apply_filter_RGB(np_image, filter)
@@ -71,8 +74,9 @@ def filter(filter, np_image, mode) :
 		output = apply_alpha(output, np_image, filter)
 	return output
 
+@jit
 def apply_filter_RGB(np_image, filter) :
-	R, G, B = slice_image(np_image)
+	R, G, B = np_image[:,:,0], np_image[:,:,1], np_image[:,:,2]
 	bottom, top = filter_dimensions(filter)
 	outR = apply(R, filter, top, bottom)
 	outG = apply(G, filter, top, bottom)
@@ -80,21 +84,18 @@ def apply_filter_RGB(np_image, filter) :
 	outRGB = np.dstack((outR, outG, outB))
 	return outRGB
 
+@jit
 def apply_filter_L(np_image, filter) :
 	bottom, top = filter_dimensions(filter)
 	out = apply(np_image, filter, top, bottom)
 	return out
 
+@jit
 def apply_alpha(outputRGBA, np_image, filter) :
 	bottom, top = filter_dimensions(filter)
 	alpha = np_image[bottom:-bottom,bottom:-bottom,np.newaxis,3]
-
-	print(outputRGBA.shape, alpha.shape)
 	RGBA = np.concatenate((outputRGBA, alpha), axis=2)
 	return RGBA
-
-def slice_image(np_image) :
-	return np_image[:,:,0], np_image[:,:,1], np_image[:,:,2]
 
 def filter_dimensions(effect) :
 	bottom = effect[2].shape[0] // 2
