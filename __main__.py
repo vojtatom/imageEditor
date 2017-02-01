@@ -5,7 +5,6 @@ from tkinter.filedialog import askopenfile, asksaveasfile
 from tkinter.messagebox import showerror
 from PIL import Image, ImageTk
 import numpy as np
-import os
 import imageoperations
 
 class Application() :
@@ -30,7 +29,8 @@ class Application() :
         self.label3 = Label(self.frame_side, text='Applied effects:', bg='gray7', fg='white', anchor=W)
 
         #setup listbox
-        self.listbox = Listbox(self.frame_bottom, relief=FLAT, bg='gray7', fg='white', borderwidth=10, selectborderwidth=0, selectbackground='gray7', selectforeground='white', highlightthickness=0)
+        self.listbox = Listbox(self.frame_bottom, relief=FLAT, bg='gray7', fg='white', borderwidth=10, \
+                               selectborderwidth=0, selectbackground='gray7', selectforeground='white', highlightthickness=0)
 
         #setup scroll
         self.scrollbar = Scrollbar(self.frame_bottom, bg='gray7', relief='flat')
@@ -82,11 +82,16 @@ class Application() :
         self.submenu2.entryconfig("Undo", state=DISABLED)
 
     def menu_enable(self) :
-        if self.loaded == FALSE :
+        if self.loaded == False :
+            self.canvas.delete(self.canvas_text)
+
+        if self.mode == "L" or self.mode == "P" or self.mode == "RGB" or self.mode == "RGBA" :
             self.menubar.entryconfig("Edit", state=NORMAL)
             self.submenu1.entryconfig("Save image", state=NORMAL)
             self.menubar.entryconfig("Filters", state=NORMAL)
-            self.canvas.delete(self.canvas_text)
+        else :
+            self.menubar.entryconfig("Edit", state=DISABLED)
+            self.menubar.entryconfig("Filters", state=DISABLED)
 
         if self.mode == "L" or self.mode == "P" :
             self.submenu2.entryconfig("Grayscale", state=DISABLED)
@@ -229,8 +234,11 @@ class Application() :
         self.br_window.resizable(width=False, height=False)
         self.br_frame = Frame(self.br_window, bg='gray7', borderwidth=10)
 
-        self.slider = Scale(self.br_window, from_=-100, to=400, bg='gray7', fg='white', troughcolor='gray7', orient=HORIZONTAL, command=self.schedule_preview, highlightthickness=0)
-        self.apply_button = Button(self.br_frame, text="Apply", bg='gray7', fg='white', command=self.apply_brightness, highlightthickness=0)
+        self.slider = Scale(self.br_window, from_=-100, to=400, bg='gray7', fg='white', \
+                            troughcolor='gray7', orient=HORIZONTAL, \
+                            command=self.schedule_preview, highlightthickness=0)
+        self.apply_button = Button(self.br_frame, text="Apply", bg='gray7', fg='white', \
+                            command=self.apply_brightness, highlightthickness=0)
 
         #adjust preview
         self.br_preview, self.br_np_image = imageoperations.get_miniature(self.pillow_image)
@@ -296,57 +304,62 @@ class Application() :
         self.update_info()
         self.update_app()
 
-def test_files(app, paths):
-    for x in paths :
-        try :
-            app.load_image(x)
-            print("> succesfull load", x)
-        except :
-            print(">>> failed load", x)
 
-        try :
-            app.save_image("." + x)
-            print("> succesfull save", x)
-        except :
-            print(">>> failed save", x)
+# def test_files(app, paths):
+#     for x in paths :
+#         try :
+#             app.load_image(x)
+#             print("> succesfull load", x)
+#         except :
+#             print(">>> failed load", x)
 
-def test_filters(app, paths):
-    for x in paths :
-        try :
-            app.load_image(x)
-            print(">> running in mode", app.mode, "...")
-            app.inverse()
-            app.emboss_weak()
-            app.emboss_strong()
-            app.undo_history()
-            app.motion_blur()
-            app.sharpen_ee()
-            app.sharpen_c()
-            app.undo_history()
-            app.undo_history()
-            app.undo_history()
-            app.undo_history()
-            app.sharpen_se()
-            app.edges_detection()
-            app.grayscale()
-            print("> succesfull on", x)
-        except :
-            print(">>> error on", x)
+#         try :
+#             app.save_image(x)
+#             print("> succesfull save", x)
+#         except :
+#             print(">>> failed save", x)
+
+
+# def test_filters(app, paths):
+#     for x in paths :
+#         try :
+#             app.load_image(x)
+#             print("> running in mode", app.mode, "...")
+#             app.inverse()
+#             app.emboss_weak()
+#             app.emboss_strong()
+#             app.undo_history()
+#             app.motion_blur()
+#             app.sharpen_ee()
+#             app.sharpen_c()
+#             app.undo_history()
+#             app.undo_history()
+#             app.undo_history()
+#             app.undo_history()
+#             app.sharpen_se()
+#             app.edges_detection()
+#             app.grayscale()
+#             app.undo_history()
+#             app.undo_history()
+#             app.undo_history()
+#             app.undo_history()
+#             app.undo_history()
+#             app.undo_history()
+#             app.undo_history()
+#             app.undo_history()
+#             print("> succesfull on", x)
+#         except :
+#             print(">>> error on", x)
 
 root = Tk()
 root.resizable(width=False, height=False)
 app = Application(root)
 app.run_application()
 
-#TESTS
-# test_files(app, ('./bird.png', './kvetina.ppm', './rgba.png', './channel1.png', './icon.png', './icon.ico'))
-test_filters(app, ('./kvetina.ppm', './rgba.png', './channel1.png', './icon.png', './icon.ico'))
-
-# test_filters(app, ('./bird.png',))
-app.exit()
-# app.load_image('./bird.png')
-# app.load_image('./kvetina.ppm')
-# app.load_image('./rgba.png')
-# app.load_image('./channel1.png')
+#TESTS - path to the tested pictures should be in the 'files' variable
+# files = ('../kvetina.ppm', '../rgba.png', '../channel1.png', '../icon.png', '../icon.ico', '../lost.png')
+# test_files(app, files)
+# test_filters(app, files)
+# app.exit()
 
 root.mainloop()
